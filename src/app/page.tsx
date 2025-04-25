@@ -15,7 +15,7 @@ import { ClipLoader } from 'react-spinners';
 import { format, addDays } from 'date-fns'; // Import date functions
 
 // Define a type for the filters
-interface Filters {
+export interface Filters {
   minPrice?: number;
   maxPrice?: number;
   starRating?: number[]; // Array of selected star ratings (e.g., [4, 5])

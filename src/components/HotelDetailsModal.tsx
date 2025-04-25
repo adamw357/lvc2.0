@@ -22,7 +22,7 @@ import { format } from 'date-fns'; // Import format function
 // We might need a different icon set or use generic ones like CheckCircleIcon.
 
 // Define or import the refined type for hotel details content
-interface HotelDetailsContent {
+export interface HotelDetailsContent {
   overview?: { 
     name?: string;
     images?: {

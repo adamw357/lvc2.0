@@ -198,12 +198,14 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ onSearch }) => {
                 <span>{guestText}</span>
             </button>
             {isGuestSelectorOpen && (
-                <GuestSelector
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-20">
+                  <GuestSelector
                     occupancies={occupancies}
-                    setOccupancies={setOccupancies}
+                    onOccupanciesChange={setOccupancies}
                     onClose={() => setIsGuestSelectorOpen(false)}
-                />
-            )}
+                  />
+                </div>
+           )}
         </div>
 
         {/* Search Button - Remains fixed width (implicitly by padding/content) */}

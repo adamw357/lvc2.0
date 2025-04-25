@@ -17,9 +17,10 @@ interface LocationAutocompleteProps {
   onLocationSelect: (locationId: string, locationName: string, lat: number, long: number, type: string) => void;
   placeholder?: string;
   className?: string;
+  inputClassName?: string;
 }
 
-export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({ onLocationSelect, placeholder = "Where are you going?", className = "" }) => {
+export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({ onLocationSelect, placeholder = "Where are you going?", className = "", inputClassName = "" }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +75,7 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({ onLo
   };
 
   return (
-    <div className="relative w-full">
+    <div className={`relative w-full ${className}`}>
       <input
         type="text"
         value={query}
@@ -86,7 +87,7 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({ onLo
         onFocus={() => setShowSuggestions(true)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={`w-full px-4 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+        className={inputClassName || `w-full px-4 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
       />
       {showSuggestions && (query.length >= 2) && (
         <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">

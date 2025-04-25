@@ -273,7 +273,7 @@ export default function Home() {
     let hotelsToProcess = hotels.filter(hotel => {
       // Star Rating Filter
       if (filters.starRating && filters.starRating.length > 0) {
-        const hotelRating = hotel.rating ?? 0;
+        const hotelRating = parseFloat(hotel.rating ?? '') ?? 0;
         if (!filters.starRating.includes(Math.floor(hotelRating))) {
           return false;
         }

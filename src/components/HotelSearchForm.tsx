@@ -1,3 +1,5 @@
+import { Label } from "@/components/ui/label";
+
 <>
           <Label htmlFor="location">Destination</Label>
           <Controller

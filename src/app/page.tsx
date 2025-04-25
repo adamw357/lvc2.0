@@ -7,7 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FilterSidebar } from '@/components/FilterSidebar';
 import { HotelResultCard } from '@/components/HotelResultCard';
-import { HotelDetailsModal } from '@/components/HotelDetailsModal';
+import { HotelDetailsModal, HotelDetailsContent } from '@/components/HotelDetailsModal';
 import { hotelService } from '@/services/hotelService';
 import { Hotel } from '@/types/hotel';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
@@ -24,14 +24,6 @@ interface Filters {
 
 // Define possible sort options
 type SortByType = 'price_asc' | 'price_desc'; // Add more later like 'rating_desc'
-
-// TODO: Define a proper type for hotel details used by the modal
-// Use the refined type from HotelDetailsModal if available and suitable
-interface HotelDetailsContent { 
-  overview?: { name?: string; images?: { url?: string }[]; };
-  propertyInformation?: { propertyDescription?: string; };
-  popularAmenities?: string[]; 
-}
 
 // Define a type for the featured hotel data structure
 interface FeaturedHotelData extends Hotel { // Extend the existing Hotel type

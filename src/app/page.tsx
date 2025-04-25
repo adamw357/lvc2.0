@@ -103,6 +103,9 @@ export default function Home() {
         const results = await Promise.allSettled(
           destinations.map(dest =>
             hotelService.searchHotels({
+              locationId: `coords:${dest.lat},${dest.lng}`, // Use coords as a makeshift ID
+              type: 'COORDINATES', // Indicate search by coords
+              nationality: 'US', // Add default nationality
               lat: dest.lat,
               lng: dest.lng,
               checkInDate: checkInDateStr,

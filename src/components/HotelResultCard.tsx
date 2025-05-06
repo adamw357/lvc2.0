@@ -2,6 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Hotel } from '@/types/hotel'; // Import the shared Hotel type
 import { MapPinIcon, CheckCircleIcon } from '@heroicons/react/24/solid'; // Import an icon for location and CheckCircleIcon
+import { Waves, Sparkles, Dumbbell, Wifi, Utensils, Martini } from 'lucide-react'; // Import amenity icons
 
 // Remove the local Hotel type definition
 // type Hotel = {
@@ -19,9 +20,68 @@ interface HotelResultCardProps {
   onViewDetails: (hotelId: string) => void; // Function to trigger modal
 }
 
+// --- Helper Function to Render Amenity Icons ---
+// (Copied from page.tsx - consider refactoring to a shared utils file later)
+const renderAmenityIcons = (facilities: Hotel['facilities']) => {
+  if (!facilities || facilities.length === 0) {
+    return null;
+  }
+
+  // Style adjustments: Increased size, slightly different colors
+  const keyAmenities: { [key: string]: React.ReactNode } = {
+    pool: <Waves key="pool" size={24} className="text-blue-600" title="Pool" />, // Larger size, adjusted color
+    spa: <Sparkles key="spa" size={24} className="text-pink-600" title="Spa" />, // Larger size, adjusted color
+    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" title="Fitness Center" />, // Larger size, adjusted color
+    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" title="Free WiFi" />, // Larger size, adjusted color
+    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" title="Restaurant" />, // Larger size, adjusted color
+    bar: <Martini key="bar" size={24} className="text-purple-700" title="Bar/Lounge" />, // Larger size, adjusted color
+    // Add more mappings as needed
+  };
+
+  const foundIcons: React.ReactNode[] = [];
+  const addedKeys = new Set<string>(); // Prevent duplicate icon types
+
+  for (const facility of facilities) {
+    if (foundIcons.length >= 4) break; // Limit to max 4 icons
+    if (!facility.name) continue;
+
+    const facilityNameLower = facility.name.toLowerCase();
+
+    for (const key in keyAmenities) {
+      if (facilityNameLower.includes(key) && !addedKeys.has(key)) {
+        foundIcons.push(keyAmenities[key]);
+        addedKeys.add(key);
+        break; // Move to next facility once a match is found for this one
+      }
+    }
+  }
+
+  if (foundIcons.length === 0) {
+    return null; // Don't render the div if no icons are found
+  }
+
+  return (
+    // Adjusted spacing for larger icons, added margin bottom
+    <div className="flex items-center space-x-3 my-3"> 
+      {foundIcons}
+    </div>
+  );
+};
+
+// --- Helper Function for Rating Description ---
+const getRatingDescription = (rating: number): string => {
+  if (rating >= 5) return 'Excellent';
+  if (rating >= 4) return 'Very Good';
+  if (rating >= 3) return 'Good';
+  if (rating >= 2) return 'Fair';
+  if (rating >= 1) return 'Okay';
+  return ''; // No description for 0 or invalid
+};
+
 export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewDetails }) => {
   // Convert rating string to number for star calculation, default to 0 if invalid
   const ratingNumber = parseInt(hotel.rating || '0', 10) || 0;
+  const ratingDescription = getRatingDescription(ratingNumber);
   const pricePerNight = hotel.rate?.perNightRate; // Use optional chaining
 
   // Extract address parts safely
@@ -61,11 +121,18 @@ export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewD
             </div>
           )}
           <div className="flex items-center mb-2">
-            {/* Render stars based on ratingNumber */}
-            <span className="text-yellow-500 mr-2">{'★'.repeat(ratingNumber)}{'☆'.repeat(5 - ratingNumber)}</span>
+            {/* Updated Rating Display */}
+            <span className="text-yellow-500 mr-1">{'★'.repeat(ratingNumber)}{'☆'.repeat(5 - ratingNumber)}</span>
+            {ratingDescription && (
+              <span className="text-sm text-gray-600 font-medium">{ratingDescription}</span>
+            )}
             {/* TODO: Add review count if available in API response */}
             {/* {hotel.reviewCount && <span className="text-sm text-gray-500">({hotel.reviewCount} reviews)</span>} */}
           </div>
+
+          {/* Render Amenity Icons Here */}
+          {renderAmenityIcons(hotel.facilities)}
+
           {/* Display Free Cancellation if available */}
           {hotel.freeCancellation && (
             <div className="flex items-center text-sm text-green-600 mb-4">
@@ -78,9 +145,12 @@ export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewD
         {/* Price and Action */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-4 pt-4 border-t border-gray-200">
           <div className="mb-2 md:mb-0">
-            {/* Display price if available */}
+            {/* DEBUG: Log the rate object */}
+            {console.log('HotelResultCard rate:', hotel.rate)}
+            {/* Updated Price Display */}
             {pricePerNight !== undefined ? (
               <>
+                <span className="text-xs text-blue-700 font-semibold block mb-0.5">LVC Member Rate</span>
                 <span className="text-lg font-bold text-gray-900">${pricePerNight.toFixed(2)}</span>
                 <span className="text-sm text-gray-500"> / night</span>
               </>
@@ -88,11 +158,12 @@ export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewD
               <span className="text-sm text-gray-500">Price not available</span>
             )}
           </div>
+          {/* Updated CTA Button */}
           <button 
             onClick={() => onViewDetails(hotel.id)}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition duration-150 ease-in-out"
           >
-            View Details
+            View Member Rates
           </button>
         </div>
       </div>

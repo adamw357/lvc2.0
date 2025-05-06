@@ -134,25 +134,31 @@ export const hotelService = {
         body: requestBody,
       });
 
-      const responseText = await response.text();
-      console.log('hotelService.getRoomsAndRates: Raw Response Text:', responseText);
+      // No need to get raw text first if response is ok
+      // console.log('hotelService.getRoomsAndRates: Raw Response Text:', responseText); 
 
       if (!response.ok) {
-        console.error(`hotelService.getRoomsAndRates: API Error Status ${response.status}`);
+        // Try to get error details from text response if not ok
+        let errorDetails = response.statusText;
         try {
-          const errorMatch = responseText.match(/<pre>(.*?)<\/pre>/i);
+          const errorText = await response.text(); 
+          const errorMatch = errorText.match(/<pre>(.*?)<\/pre>/i);
           if (errorMatch && errorMatch[1]) {
-            throw new Error(`API Error ${response.status}: ${errorMatch[1]}`);
+            errorDetails = errorMatch[1];
           }
         } catch {}
-        throw new Error(`Failed to fetch rooms and rates: ${response.statusText} (Status: ${response.status})`);
+        console.error(`hotelService.getRoomsAndRates: API Error Status ${response.status} - ${errorDetails}`);
+        throw new Error(`Failed to fetch rooms and rates: ${errorDetails} (Status: ${response.status})`);
       }
 
-      const data = JSON.parse(responseText);
-      console.log('hotelService.getRoomsAndRates: Parsed API Success Data', data);
-      return data; 
+      // Use response.json() to parse directly
+      const data = await response.json();
+      
+      return data; // Return the parsed data
+      
     } catch (error) {
-      console.error('hotelService.getRoomsAndRates: Fetch or JSON parse failed', error);
+      // Catch errors from fetch, response.ok check, or response.json()
+      console.error('hotelService.getRoomsAndRates: Fetch or JSON processing failed', error);
       if (error instanceof Error) {
          throw new Error(`Processing rooms/rates failed: ${error.message}`);
       } else {

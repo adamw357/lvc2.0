@@ -13,6 +13,7 @@ import { Hotel } from '@/types/hotel';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { ClipLoader } from 'react-spinners';
 import { format, addDays } from 'date-fns'; // Import date functions
+import { Waves, Sparkles, Dumbbell, Wifi, Utensils, Martini } from 'lucide-react'; // Import selected icons
 
 // Define a type for the filters
 export interface Filters {
@@ -29,6 +30,53 @@ type SortByType = 'price_asc' | 'price_desc'; // Add more later like 'rating_des
 interface FeaturedHotelData extends Hotel { // Extend the existing Hotel type
   displayName: string; // Add the display name (e.g., "Cancun")
 }
+
+// --- Helper Function to Render Amenity Icons ---
+const renderAmenityIcons = (facilities: Hotel['facilities']) => {
+  if (!facilities || facilities.length === 0) {
+    return null;
+  }
+
+  // Style adjustments: Increased size, slightly different colors
+  const keyAmenities: { [key: string]: React.ReactNode } = {
+    pool: <Waves key="pool" size={24} className="text-blue-600" title="Pool" />, // Larger size, adjusted color
+    spa: <Sparkles key="spa" size={24} className="text-pink-600" title="Spa" />, // Larger size, adjusted color
+    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" title="Fitness Center" />, // Larger size, adjusted color
+    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" title="Free WiFi" />, // Larger size, adjusted color
+    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" title="Restaurant" />, // Larger size, adjusted color
+    bar: <Martini key="bar" size={24} className="text-purple-700" title="Bar/Lounge" />, // Larger size, adjusted color
+    // Add more mappings as needed
+  };
+
+  const foundIcons: React.ReactNode[] = [];
+  const addedKeys = new Set<string>(); // Prevent duplicate icon types
+
+  for (const facility of facilities) {
+    if (foundIcons.length >= 4) break; // Limit to max 4 icons
+    if (!facility.name) continue;
+
+    const facilityNameLower = facility.name.toLowerCase();
+
+    for (const key in keyAmenities) {
+      if (facilityNameLower.includes(key) && !addedKeys.has(key)) {
+        foundIcons.push(keyAmenities[key]);
+        addedKeys.add(key);
+        break; // Move to next facility once a match is found for this one
+      }
+    }
+  }
+
+  if (foundIcons.length === 0) {
+    return null;
+  }
+
+  return (
+    // Adjusted spacing for larger icons
+    <div className="flex justify-center space-x-3 mt-2 mb-3"> 
+      {foundIcons}
+    </div>
+  );
+};
 
 export default function Home() {
   // State for search results
@@ -78,6 +126,7 @@ export default function Home() {
       const checkInDateStr = format(checkInDateObj, 'yyyy-MM-dd');
       const checkOutDateStr = format(checkOutDateObj, 'yyyy-MM-dd');
       const defaultOccupancy = [{ numOfAdults: 2, numOfChildren: 0, childAges: [], numOfRoom: 1 }];
+      const defaultCurrency = 'USD'; // Assuming USD, adjust if needed
 
       // Define target destinations with display names and coordinates
       // Using approximate coordinates
@@ -112,6 +161,8 @@ export default function Home() {
         results.forEach((result, index) => {
           const destInfo = destinations[index];
           if (result.status === 'fulfilled') {
+            console.log(`Featured hotel data for ${destInfo.displayName}:`, result.value?.data);
+            
             const hotelData = result.value?.data?.hotels?.[0]; // Take the first hotel returned
             if (hotelData) {
               fetched.push({ ...hotelData, displayName: destInfo.displayName });
@@ -270,8 +321,32 @@ export default function Home() {
           return false;
         }
       }
-      // Add other filters here (amenities when available)
-      return true; 
+
+      // Amenities Filter
+      if (filters.amenities && filters.amenities.length > 0) {
+        // Get the hotel's facility names (lowercase) or an empty array if none
+        const hotelFacilityNames = hotel.facilities?.map(f => f.name?.toLowerCase() ?? '') || [];
+        
+        // Check if *all* selected amenities are present in the hotel's facilities
+        const hasAllSelectedAmenities = filters.amenities.every(selectedAmenity => 
+          // Check if any hotel facility name includes the selected amenity keyword
+          hotelFacilityNames.some(facilityName => facilityName.includes(selectedAmenity))
+        );
+        
+        if (!hasAllSelectedAmenities) {
+          return false; // Exclude hotel if it doesn't have all selected amenities
+        }
+      }
+
+      // Price Filter (Add later if needed)
+      // if (filters.minPrice !== undefined && (hotel.rate?.perNightRate ?? Infinity) < filters.minPrice) {
+      //   return false;
+      // }
+      // if (filters.maxPrice !== undefined && (hotel.rate?.perNightRate ?? 0) > filters.maxPrice) {
+      //   return false;
+      // }
+
+      return true; // Keep hotel if it passes all filters
     });
 
     // 2. Sorting
@@ -402,44 +477,68 @@ export default function Home() {
                     <p><strong>Oops!</strong> {featuredError}</p>
                   </div>
                 )}
-                {/* Success State - Render Cards */}
+                {/* Success State - Render Cards with Link */}
                 {!isFeaturedLoading && !featuredError && featuredHotels.length > 0 && (
-                  // Grid for multiple cards
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {featuredHotels.map((hotel) => ( // Map over the array
-                      <div key={`${hotel.displayName}-${hotel.id}`} className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-                        <div className="relative h-48 w-full">
-                          <Image
-                            src={hotel.image || '/placeholder-image.jpg'} // Use hotel.image
-                            alt={hotel.displayName || 'Hotel image'}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 23vw" // Adjusted sizes
-                          />
-                        </div>
-                        <div className="p-4 flex flex-col flex-grow text-center">
-                          {/* Display Destination Name */}
-                          <h3 className="text-xl font-bold mb-1 text-[#002855]">{hotel.displayName}</h3>
-                          {/* Display Hotel Name */}
-                          <p className="text-sm text-gray-600 mb-3 truncate h-10 leading-5">{hotel.hotelName || 'Hotel Name'}</p> { /* Use hotelName */ }
+                    {featuredHotels.map((hotel) => {
+                      // --- Construct Query Params for Link ---
+                      const today = new Date(); // Recalculate or store these if fetchFeatured changes
+                      const checkInDateObj = addDays(today, 95);
+                      const checkOutDateObj = addDays(checkInDateObj, 1);
+                      const checkInDateStr = format(checkInDateObj, 'yyyy-MM-dd');
+                      const checkOutDateStr = format(checkOutDateObj, 'yyyy-MM-dd');
+                      const defaultOccupancy = [{ numOfAdults: 2, numOfChildren: 0, childAges: [], numOfRoom: 1 }];
+                      const defaultCurrency = 'USD'; // Ensure consistency
+                      const lat = hotel.lat; // Use lat/lng from the specific hotel data
+                      const lng = hotel.lng;
 
-                          {hotel.rate?.totalRate ? ( // Use totalRate from API response
-                            <p className="text-lg font-semibold text-gray-800 mt-auto">
-                              From ${hotel.rate.totalRate.toFixed(2)} {/* Display totalRate */}
-                              <span className="text-xs text-gray-500 font-normal"> / night</span> { /* Label might need adjustment */ }
-                            </p>
-                          ) : (
-                            <p className="text-sm text-gray-500 mt-auto">Rates unavailable</p>
-                          )}
-                          <button
-                            onClick={() => handleViewDetails(hotel.id)}
-                            className="mt-4 w-full px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition"
-                          >
-                            View Hotel Details
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      const queryParams = new URLSearchParams({
+                        checkIn: checkInDateStr,
+                        checkOut: checkOutDateStr,
+                        occupancies: encodeURIComponent(JSON.stringify(defaultOccupancy)), // Encode occupancy JSON
+                        lat: lat || '', // Include lat/lng if available
+                        lng: lng || '',
+                        currency: defaultCurrency,
+                      }).toString();
+                      // --- End Construct Query Params ---
+
+                      return (
+                        <Link 
+                          key={`${hotel.displayName}-${hotel.id}`} 
+                          href={`/hotel/${hotel.id}?${queryParams}`} // Append query params
+                          className="block group bg-white rounded-lg shadow-lg overflow-hidden flex flex-col hover:shadow-xl transition-shadow duration-200"
+                        >
+                          <div className="relative h-48 w-full">
+                            <Image
+                              src={hotel.image || '/placeholder-image.jpg'}
+                              alt={hotel.displayName || 'Hotel image'}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 23vw"
+                            />
+                          </div>
+                          <div className="p-4 flex flex-col flex-grow text-center">
+                            <h3 className="text-xl font-bold mb-1 text-[#002855]">{hotel.displayName}</h3>
+                            <p className="text-sm text-gray-600 mb-3 truncate h-10 leading-5">{hotel.hotelName || 'Hotel Name'}</p>
+                            {renderAmenityIcons(hotel.facilities)}
+                            {hotel.rate?.totalRate ? ( 
+                              <div className="mt-auto"> 
+                                <span className="text-xs text-blue-700 font-semibold block mb-0.5">LVC Member Rate</span>
+                                <p className="text-lg font-semibold text-gray-800">
+                                  From ${hotel.rate.totalRate.toFixed(2)} 
+                                  <span className="text-xs text-gray-500 font-normal"> / night</span>
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500 mt-auto">Rates unavailable</p>
+                            )}
+                            <div className="mt-3 w-full px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md group-hover:bg-blue-700 transition duration-150 ease-in-out">
+                              View Member Rates
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
                 {/* No Featured Hotels Found State */}

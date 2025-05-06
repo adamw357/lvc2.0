@@ -63,15 +63,18 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   // Helper to check if a star rating is selected
   const isStarSelected = (rating: number) => (filters.starRating || []).includes(rating);
 
-  // Helper to check if an amenity is selected (Example)
+  // Helper to check if an amenity is selected
   const isAmenitySelected = (amenityId: string) => (filters.amenities || []).includes(amenityId);
 
-  // Example Amenities (replace with actual data/constants later)
-  const exampleAmenities = [
+  // Define actual amenities based on icons used
+  const amenitiesList = [
+    { id: 'pool', label: 'Pool' },
+    { id: 'spa', label: 'Spa' },
+    { id: 'fitness', label: 'Fitness Center' },
     { id: 'wifi', label: 'Free WiFi' },
-    { id: 'pool', label: 'Swimming Pool' },
-    { id: 'parking', label: 'Parking' },
-    { id: 'gym', label: 'Fitness Center' },
+    { id: 'restaurant', label: 'Restaurant' },
+    { id: 'bar', label: 'Bar/Lounge' },
+    // Add more if needed
   ];
 
   return (
@@ -121,16 +124,16 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       <div className="mb-6">
         <h3 className="font-semibold mb-2 text-gray-700">Amenities</h3>
         <div className="space-y-2">
-          {exampleAmenities.map(amenity => (
+          {amenitiesList.map(amenity => (
             <div key={amenity.id} className="flex items-center">
               <input 
                 type="checkbox" 
-                id={amenity.id} 
+                id={`amenity-${amenity.id}`}
                 className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 checked={isAmenitySelected(amenity.id)}
                 onChange={() => handleAmenityChange(amenity.id)}
               />
-              <label htmlFor={amenity.id} className="text-gray-600 cursor-pointer">{amenity.label}</label>
+              <label htmlFor={`amenity-${amenity.id}`} className="text-gray-600 cursor-pointer">{amenity.label}</label>
             </div>
           ))}
         </div>

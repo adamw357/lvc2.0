@@ -110,59 +110,16 @@ export const hotelService = {
     lng: number;
     currency: string;
   }) => {
-    const path = '/api/ext/hotel/roomsandrates';
-    const cleanBaseUrl = XENI_BASE_URL.replace(/\/$/, ''); 
-    const cleanPath = path.replace(/^\//, '');
-    const url = `${cleanBaseUrl}/${cleanPath}`;
-    
-    const sessionId = crypto.randomUUID();
-
-    const requestBody = JSON.stringify(params);
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-xeni-token': XENI_API_KEY,
-      'x-session-id': sessionId,
-      'corelationId': sessionId,
-    };
-
-    console.log('hotelService.getRoomsAndRates: Calling API', { url, method: 'POST', headers, body: requestBody });
-
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        body: requestBody,
-      });
-
-      // No need to get raw text first if response is ok
-      // console.log('hotelService.getRoomsAndRates: Raw Response Text:', responseText); 
-
-      if (!response.ok) {
-        // Try to get error details from text response if not ok
-        let errorDetails = response.statusText;
-        try {
-          const errorText = await response.text(); 
-          const errorMatch = errorText.match(/<pre>(.*?)<\/pre>/i);
-          if (errorMatch && errorMatch[1]) {
-            errorDetails = errorMatch[1];
-          }
-        } catch {}
-        console.error(`hotelService.getRoomsAndRates: API Error Status ${response.status} - ${errorDetails}`);
-        throw new Error(`Failed to fetch rooms and rates: ${errorDetails} (Status: ${response.status})`);
-      }
-
-      // Use response.json() to parse directly
-      const data = await response.json();
-      
-      return data; // Return the parsed data
-      
+      console.log('hotelService.getRoomsAndRates: Calling API', { params });
+      const response = await api.post('/api/ext/hotel/roomsandrates', params);
+      return response.data;
     } catch (error) {
-      // Catch errors from fetch, response.ok check, or response.json()
-      console.error('hotelService.getRoomsAndRates: Fetch or JSON processing failed', error);
+      console.error('hotelService.getRoomsAndRates: API error:', error);
       if (error instanceof Error) {
-         throw new Error(`Processing rooms/rates failed: ${error.message}`);
+        throw new Error(`Failed to fetch rooms and rates: ${error.message}`);
       } else {
-         throw new Error('Processing rooms/rates failed due to an unknown error.');
+        throw new Error('Failed to fetch rooms and rates due to an unknown error.');
       }
     }
   },

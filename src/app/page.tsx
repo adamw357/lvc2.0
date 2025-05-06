@@ -14,6 +14,8 @@ import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { ClipLoader } from 'react-spinners';
 import { format, addDays } from 'date-fns'; // Import date functions
 import { Waves, Sparkles, Dumbbell, Wifi, Utensils, Martini } from 'lucide-react'; // Import selected icons
+import { HotelMap } from '@/components/HotelMap';
+import { HotelNameSearch } from '@/components/HotelNameSearch';
 
 // Define a type for the filters
 export interface Filters {
@@ -37,15 +39,13 @@ const renderAmenityIcons = (facilities: Hotel['facilities']) => {
     return null;
   }
 
-  // Style adjustments: Increased size, slightly different colors
   const keyAmenities: { [key: string]: React.ReactNode } = {
-    pool: <Waves key="pool" size={24} className="text-blue-600" title="Pool" />, // Larger size, adjusted color
-    spa: <Sparkles key="spa" size={24} className="text-pink-600" title="Spa" />, // Larger size, adjusted color
-    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" title="Fitness Center" />, // Larger size, adjusted color
-    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" title="Free WiFi" />, // Larger size, adjusted color
-    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" title="Restaurant" />, // Larger size, adjusted color
-    bar: <Martini key="bar" size={24} className="text-purple-700" title="Bar/Lounge" />, // Larger size, adjusted color
-    // Add more mappings as needed
+    pool: <Waves key="pool" size={24} className="text-blue-600" />, // Removed title
+    spa: <Sparkles key="spa" size={24} className="text-pink-600" />, // Removed title
+    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" />, // Removed title
+    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" />, // Removed title
+    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" />, // Removed title
+    bar: <Martini key="bar" size={24} className="text-purple-700" />, // Removed title
   };
 
   const foundIcons: React.ReactNode[] = [];
@@ -112,6 +112,74 @@ export default function Home() {
   const [featuredHotels, setFeaturedHotels] = useState<FeaturedHotelData[]>([]); // Holds up to 4 hotels
   const [isFeaturedLoading, setIsFeaturedLoading] = useState<boolean>(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
+
+  // --- Hotel Name Query State (Moved Up) ---
+  const [hotelNameQuery, setHotelNameQuery] = useState<string>('');
+
+  // --- Processed Hotels Logic (Moved Up) ---
+  const processedHotels = useMemo(() => {
+    let hotelsToProcess = hotels;
+    // Optional: console.log('PROCESSED_HOTELS: Start. Query:', hotelNameQuery, 'Initial Hotels:', hotels.length);
+
+    // 1. Apply Hotel Name Filter FIRST
+    if (hotelNameQuery.trim()) {
+      const searchQuery = hotelNameQuery.toLowerCase();
+      hotelsToProcess = hotelsToProcess.filter(hotel =>
+        hotel.hotelName?.toLowerCase().includes(searchQuery)
+      );
+    }
+
+    // 2. Filtering (Star Rating, Amenities)
+    hotelsToProcess = hotelsToProcess.filter(hotel => {
+      if (filters.starRating && filters.starRating.length > 0) {
+        const hotelRating = parseFloat(hotel.rating ?? '') ?? 0;
+        if (!filters.starRating.includes(Math.floor(hotelRating))) {
+          return false;
+        }
+      }
+      if (filters.amenities && filters.amenities.length > 0) {
+        const hotelFacilityNames = hotel.facilities?.map(f => f.name?.toLowerCase() ?? '') || [];
+        const hasAllSelectedAmenities = filters.amenities.every(selectedAmenity =>
+          hotelFacilityNames.some(facilityName => facilityName.includes(selectedAmenity))
+        );
+        if (!hasAllSelectedAmenities) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // 3. Sorting
+    hotelsToProcess.sort((a, b) => {
+      const priceA = a.rate?.perNightRate ?? 0;
+      const priceB = b.rate?.perNightRate ?? 0;
+      switch (sortBy) {
+        case 'price_asc': return priceA - priceB;
+        case 'price_desc': return priceB - priceA;
+        default: return 0;
+      }
+    });
+    return hotelsToProcess;
+  }, [hotels, filters, sortBy, hotelNameQuery]);
+
+  // --- State related to UI, can stay here or be grouped if preferred ---
+  const [filteredHotels, setFilteredHotels] = useState<Hotel[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+
+  // --- Map Modal State & View State ---
+  const [showMapModal, setShowMapModal] = useState(false); // For the existing full modal, might be phased out
+  const [isMapView, setIsMapView] = useState(false); // New state for toggling map-centric layout
+
+  // Compute map center for preview (average of hotel coordinates or default to Las Vegas)
+  const mapCenter = useMemo(() => {
+    const hotelsToShow = processedHotels;
+    if (!hotelsToShow.length) return { lat: 36.1147, lng: -115.1728 };
+    const validHotels = hotelsToShow.filter(h => h.lat && h.lng && !isNaN(Number(h.lat)) && !isNaN(Number(h.lng)));
+    if (!validHotels.length) return { lat: 36.1147, lng: -115.1728 }; // Fallback if no valid coords in processed
+    const avgLat = validHotels.reduce((sum, h) => sum + Number(h.lat), 0) / validHotels.length;
+    const avgLng = validHotels.reduce((sum, h) => sum + Number(h.lng), 0) / validHotels.length;
+    return { lat: avgLat, lng: avgLng };
+  }, [processedHotels]);
 
   // --- Fetch Featured Hotels on Mount ---
   useEffect(() => {
@@ -191,6 +259,11 @@ export default function Home() {
     fetchFeatured();
   }, []);
 
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState<number | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // Function to handle the search submission from BookingWidget
   const handleSearch = async (searchParams: any) => {
     console.log("page.tsx: handleSearch received params:", searchParams);
@@ -205,9 +278,10 @@ export default function Home() {
     setSearchLat(null);
     setSearchLng(null);
     setSearchCurrency(null);
+    setCurrentPage(1);
 
     try {
-      const responseData = await hotelService.searchHotels(searchParams);
+      const responseData = await hotelService.searchHotels(searchParams, 1, 50);
       console.log('page.tsx: Search API Response Raw Data:', responseData);
 
       // Use the exact path confirmed from logs
@@ -224,6 +298,7 @@ export default function Home() {
       setSearchLat(searchParams.lat);
       setSearchLng(searchParams.lng);
       setSearchCurrency(searchParams.currency);
+      setTotalResults(responseData?.data?.totalCount || fetchedHotels.length);
       
       console.log('page.tsx: Stored search context:', { 
         checkIn: searchParams.checkInDate, 
@@ -247,6 +322,35 @@ export default function Home() {
       // Also clear context on error (already done above)
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Show More Results handler
+  const handleShowMoreResults = async () => {
+    setIsLoadingMore(true);
+    const nextPage = currentPage + 1;
+    try {
+      // Use the last search params (assume stored in state or re-use last)
+      // For simplicity, re-use the last search context (you may want to store lastSearchParams in state)
+      const responseData = await hotelService.searchHotels({
+        locationId: searchLat && searchLng ? `coords:${searchLat},${searchLng}` : '',
+        checkInDate: searchCheckIn ? format(searchCheckIn, 'yyyy-MM-dd') : '',
+        checkOutDate: searchCheckOut ? format(searchCheckOut, 'yyyy-MM-dd') : '',
+        occupancies: searchOccupancies || [{ numOfAdults: 2, numOfChildren: 0, childAges: [], numOfRoom: 1 }],
+        lat: searchLat || 0,
+        lng: searchLng || 0,
+        nationality: 'US',
+        type: 'COORDINATES',
+        currency: searchCurrency || 'USD',
+      }, nextPage, 50);
+      const newHotels: Hotel[] = responseData?.data?.hotels || [];
+      setHotels(prev => [...prev, ...newHotels]);
+      setCurrentPage(nextPage);
+      setTotalResults(responseData?.data?.totalCount || (hotels.length + newHotels.length));
+    } catch (err) {
+      // Optionally show error
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -310,68 +414,23 @@ export default function Home() {
     setSortBy(newSortValue as SortByType);
   };
 
-  // Apply filters and sorting to the hotel list
-  const processedHotels = useMemo(() => {
-    // 1. Filtering
-    let hotelsToProcess = hotels.filter(hotel => {
-      // Star Rating Filter
-      if (filters.starRating && filters.starRating.length > 0) {
-        const hotelRating = parseFloat(hotel.rating ?? '') ?? 0;
-        if (!filters.starRating.includes(Math.floor(hotelRating))) {
-          return false;
-        }
-      }
+  // This definition is now AFTER processedHotels, which is fine.
+  const handleHotelNameSearch = (query: string) => {
+    setHotelNameQuery(query);
+  };
 
-      // Amenities Filter
-      if (filters.amenities && filters.amenities.length > 0) {
-        // Get the hotel's facility names (lowercase) or an empty array if none
-        const hotelFacilityNames = hotel.facilities?.map(f => f.name?.toLowerCase() ?? '') || [];
-        
-        // Check if *all* selected amenities are present in the hotel's facilities
-        const hasAllSelectedAmenities = filters.amenities.every(selectedAmenity => 
-          // Check if any hotel facility name includes the selected amenity keyword
-          hotelFacilityNames.some(facilityName => facilityName.includes(selectedAmenity))
-        );
-        
-        if (!hasAllSelectedAmenities) {
-          return false; // Exclude hotel if it doesn't have all selected amenities
-        }
-      }
+  const handleMarkerClick = (hotelWithId: Hotel) => {
+    setSelectedHotel(hotelWithId);
+    const element = document.getElementById(`hotel-${hotelWithId.id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
-      // Price Filter (Add later if needed)
-      // if (filters.minPrice !== undefined && (hotel.rate?.perNightRate ?? Infinity) < filters.minPrice) {
-      //   return false;
-      // }
-      // if (filters.maxPrice !== undefined && (hotel.rate?.perNightRate ?? 0) > filters.maxPrice) {
-      //   return false;
-      // }
-
-      return true; // Keep hotel if it passes all filters
-    });
-
-    // 2. Sorting
-    hotelsToProcess.sort((a, b) => {
-      const priceA = a.rate?.perNightRate ?? 0; // Default to 0 if price missing
-      const priceB = b.rate?.perNightRate ?? 0; // Default to 0 if price missing
-
-      switch (sortBy) {
-        case 'price_asc':
-          return priceA - priceB;
-        case 'price_desc':
-          return priceB - priceA;
-        // Add cases for other sort options (e.g., rating) here
-        default:
-          return 0; // Default: no specific sort order (or handle relevance)
-      }
-    });
-
-    return hotelsToProcess;
-  }, [hotels, filters, sortBy]); // Add sortBy to dependency array
-
+  // --- Render the map at the very top for debugging ---
   return (
     <>
       <LoadingOverlay isLoading={isLoading} />
-      
       <Navigation />
       <div className="min-h-screen">
         {/* Hero Section */}
@@ -393,17 +452,62 @@ export default function Home() {
         {/* Show section if loading, or if there's an error, or if search completed (even if no results) */}
         {!isLoading && (error || hotels.length >= 0) && !(!error && hotels.length === 0) && (
           <section className="py-16 bg-gray-50">
-            <div className="container mx-auto px-4 flex flex-col md:flex-row gap-8">
+            <div className="container mx-auto px-4 flex flex-col md:flex-row md:items-start gap-8">
               {/* Filter Sidebar - Pass sorting props */}
-              <FilterSidebar 
-                filters={filters} 
-                onFilterChange={handleFilterChange} 
-                sortBy={sortBy}                       // Pass state
-                onSortChange={handleSortChange}         // Pass handler
-              />
+              <div className="lg:col-span-1">
+                {/* Map Preview Box */}
+                <div className="mb-6 relative rounded-lg overflow-hidden shadow border bg-gray-100" style={{ height: 140 }}>
+                  {/* Static map image using Google Static Maps API (or fallback placeholder) */}
+                  <img
+                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${mapCenter.lat},${mapCenter.lng}&zoom=12&size=400x140&maptype=roadmap&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+                    alt="Map preview"
+                    className="w-full h-full object-cover"
+                    style={{ minHeight: 140, minWidth: 200 }}
+                    onError={e => {
+                      const img = e.target as HTMLImageElement;
+                      if (!img.src.includes('map-placeholder.png')) {
+                        img.src = '/map-placeholder.png';
+                      }
+                    }}
+                  />
+                  <button
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-2 bg-black bg-opacity-70 hover:bg-opacity-80 text-white font-bold text-lg rounded-lg shadow-lg border-2 border-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+                    style={{ pointerEvents: 'auto' }}
+                    onClick={() => {
+                      setIsMapView(true); // Activate map view
+                      setShowMapModal(false); // Ensure old modal doesn't also show
+                      console.log('Go to map clicked, isMapView set to true');
+                    }}
+                  >
+                    Go to map
+                  </button>
+                </div>
+                <FilterSidebar 
+                  filters={filters} 
+                  onFilterChange={handleFilterChange} 
+                  sortBy={sortBy}                       // Pass state
+                  onSortChange={handleSortChange}         // Pass handler
+                />
+                {/* Hotel Name Search Box - Move between star rating and amenities */}
+                <div className="mb-6">
+                  <label htmlFor="hotel-name-search" className="block text-sm font-semibold text-gray-700 mb-1">Hotel Name</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                    </span>
+                    <input
+                      id="hotel-name-search"
+                      type="text"
+                      className="w-full pl-16 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                      onChange={e => handleHotelNameSearch(e.target.value)}
+                      style={{ textIndent: '2.75rem' }}
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Results List - Use processedHotels */}
-              <div className="flex-1">
+              <div className="lg:col-span-2 md:self-start">
                 {error && (
                   <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                     <strong className="font-bold">Error: </strong>
@@ -416,7 +520,13 @@ export default function Home() {
                     {/* Check processedHotels length */}
                     {processedHotels.length > 0 ? (
                       <>
-                        <h2 className="text-2xl font-semibold mb-4">Search Results ({processedHotels.length})</h2>
+                        <h2 className="text-2xl font-semibold mb-4">
+                          Search Results (
+                            {typeof totalResults === 'number' && totalResults > processedHotels.length
+                              ? `${processedHotels.length} of ${totalResults}`
+                              : `${processedHotels.length} shown`}
+                          )
+                        </h2>
                         {processedHotels.map((hotel) => (
                           <HotelResultCard 
                             key={hotel.id} 
@@ -424,6 +534,18 @@ export default function Home() {
                             onViewDetails={handleViewDetails} 
                           />
                         ))}
+                        {/* Show More Results Button */}
+                        {typeof totalResults === 'number' && hotels.length < totalResults && (
+                          <div className="mt-8">
+                            <button
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow transition disabled:opacity-60"
+                              onClick={handleShowMoreResults}
+                              disabled={isLoadingMore}
+                            >
+                              {isLoadingMore ? 'Loading...' : 'Show More Results'}
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       // Message when search is done but no results match (or match filters)
@@ -521,11 +643,13 @@ export default function Home() {
                             <h3 className="text-xl font-bold mb-1 text-[#002855]">{hotel.displayName}</h3>
                             <p className="text-sm text-gray-600 mb-3 truncate h-10 leading-5">{hotel.hotelName || 'Hotel Name'}</p>
                             {renderAmenityIcons(hotel.facilities)}
-                            {hotel.rate?.totalRate ? ( 
-                              <div className="mt-auto"> 
-                                <span className="text-xs text-blue-700 font-semibold block mb-0.5">LVC Member Rate</span>
+                            {hotel.rate?.totalRate ? (
+                              <div className="mt-auto">
+                                <span className="text-xs text-blue-700 font-semibold block mb-0.5">Member Price</span>
                                 <p className="text-lg font-semibold text-gray-800">
-                                  From ${hotel.rate.totalRate.toFixed(2)} 
+                                  From {(" ")}
+                                  {/* Format price with toLocaleString */}
+                                  {hotel.rate.totalRate.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                   <span className="text-xs text-gray-500 font-normal"> / night</span>
                                 </p>
                               </div>
@@ -533,7 +657,7 @@ export default function Home() {
                               <p className="text-sm text-gray-500 mt-auto">Rates unavailable</p>
                             )}
                             <div className="mt-3 w-full px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md group-hover:bg-blue-700 transition duration-150 ease-in-out">
-                              View Member Rates
+                              See Details
                             </div>
                           </div>
                         </Link>
@@ -564,7 +688,76 @@ export default function Home() {
             </section>
           </>
         )}
+
+        {hotels.length > 0 && (
+          <div className="container mx-auto px-4 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left column - Search and Results */}
+              <div className="lg:col-span-2">
+                <div className="space-y-6">
+                  {(filteredHotels.length > 0 ? filteredHotels : hotels).map((hotel) => (
+                    <div 
+                      key={hotel.id}
+                      id={`hotel-${hotel.id}`}
+                      className={`transition-all duration-200 ${
+                        selectedHotel?.id === hotel.id ? 'ring-2 ring-blue-500' : ''
+                      }`}
+                    >
+                      <HotelResultCard 
+                        hotel={hotel}
+                        onViewDetails={() => setSelectedHotel(hotel)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right column - (no map here now) */}
+              <div className="lg:col-span-1"></div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Map Modal Overlay */}
+      {showMapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-4xl h-[80vh] flex flex-col">
+            <button
+              className="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 rounded-full p-2 text-gray-700 font-bold text-lg z-10"
+              onClick={() => setShowMapModal(false)}
+              aria-label="Close Map"
+            >
+              ×
+            </button>
+            <div className="flex-1 p-2">
+              <HotelMap
+                hotels={processedHotels.map(hotel => ({
+                  hotelName: hotel.hotelName,
+                  lat: parseFloat(hotel.lat || '0'),
+                  lng: parseFloat(hotel.lng || '0'),
+                  address: {
+                    line1: hotel.address?.line1 || '',
+                  },
+                  id: hotel.id,
+                }))}
+                onMarkerClick={(mapHotel) => {
+                  const originalHotel = processedHotels.find(
+                    h => h.hotelName === mapHotel.hotelName &&
+                         parseFloat(h.lat || '0') === mapHotel.lat &&
+                         parseFloat(h.lng || '0') === mapHotel.lng
+                  );
+                  if (originalHotel) {
+                    handleMarkerClick(originalHotel); 
+                  } else {
+                    console.warn('Original hotel not found for map marker click based on name/lat/lng', mapHotel);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hotel Details Modal - Pass full search context */}
       {isModalOpen && (

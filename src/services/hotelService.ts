@@ -69,15 +69,11 @@ export const hotelService = {
       return [];
     } catch (error) {
       if (error instanceof AxiosError) {
-        if (error.response?.status === 400) {
-          console.warn('Invalid autosuggest request:', error.response?.data?.message);
-        } else {
-          console.error('Autosuggest API error:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-          });
-        }
+        console.error('Autosuggest API error:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
       } else {
         console.error('Unexpected error during autosuggest:', error);
       }
@@ -110,60 +106,26 @@ export const hotelService = {
     lng: number;
     currency: string;
   }) => {
-    const path = '/api/ext/hotel/roomsandrates';
-    const cleanBaseUrl = XENI_BASE_URL.replace(/\/$/, ''); 
-    const cleanPath = path.replace(/^\//, '');
-    const url = `${cleanBaseUrl}/${cleanPath}`;
-    
+    const url = '/api/ext/hotel/roomsandrates';
     const sessionId = crypto.randomUUID();
 
-    const requestBody = JSON.stringify(params);
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-xeni-token': XENI_API_KEY,
-      'x-session-id': sessionId,
-      'corelationId': sessionId,
-    };
-
-    console.log('hotelService.getRoomsAndRates: Calling API', { url, method: 'POST', headers, body: requestBody });
-
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        body: requestBody,
+      const response = await api.post(url, params, {
+        headers: {
+          'x-xeni-token': XENI_API_KEY,
+          'x-session-id': sessionId,
+          'corelationId': sessionId,
+        }
       });
 
-      // No need to get raw text first if response is ok
-      // console.log('hotelService.getRoomsAndRates: Raw Response Text:', responseText); 
-
-      if (!response.ok) {
-        // Try to get error details from text response if not ok
-        let errorDetails = response.statusText;
-        try {
-          const errorText = await response.text(); 
-          const errorMatch = errorText.match(/<pre>(.*?)<\/pre>/i);
-          if (errorMatch && errorMatch[1]) {
-            errorDetails = errorMatch[1];
-          }
-        } catch {}
-        console.error(`hotelService.getRoomsAndRates: API Error Status ${response.status} - ${errorDetails}`);
-        throw new Error(`Failed to fetch rooms and rates: ${errorDetails} (Status: ${response.status})`);
-      }
-
-      // Use response.json() to parse directly
-      const data = await response.json();
-      
-      return data; // Return the parsed data
-      
+      console.log('Rooms and Rates API Response:', response.data);
+      return response.data;
     } catch (error) {
-      // Catch errors from fetch, response.ok check, or response.json()
-      console.error('hotelService.getRoomsAndRates: Fetch or JSON processing failed', error);
-      if (error instanceof Error) {
-         throw new Error(`Processing rooms/rates failed: ${error.message}`);
-      } else {
-         throw new Error('Processing rooms/rates failed due to an unknown error.');
+      console.error('Failed to fetch rooms and rates:', error);
+      if (error instanceof AxiosError) {
+        throw new Error(`Failed to fetch rooms and rates: ${error.response?.data?.message || error.message}`);
       }
+      throw error;
     }
   },
 
@@ -237,6 +199,53 @@ export const hotelService = {
       } else {
          throw new Error('Fetching hotel details failed due to an unknown error.');
       }
+    }
+  },
+
+  createBooking: async (params: {
+    hotelId: string;
+    token: string;
+    guestDetails: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+    };
+    checkInDate: string;
+    checkOutDate: string;
+    occupancies: any[];
+    currency: string;
+    rateId: string;
+    recommendationId: string;
+  }) => {
+    const url = `/api/ext/hotel/${params.hotelId}/${params.token}/book`;
+    const sessionId = crypto.randomUUID();
+
+    try {
+      const response = await api.post(url, {
+        guestDetails: params.guestDetails,
+        checkInDate: params.checkInDate,
+        checkOutDate: params.checkOutDate,
+        occupancies: params.occupancies,
+        currency: params.currency,
+        rateId: params.rateId,
+        recommendationId: params.recommendationId
+      }, {
+        headers: {
+          'x-xeni-token': XENI_API_KEY,
+          'x-session-id': sessionId,
+          'corelationId': sessionId,
+        }
+      });
+
+      console.log('Booking API Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Booking failed:', error);
+      if (error instanceof AxiosError) {
+        throw new Error(`Booking failed: ${error.response?.data?.message || error.message}`);
+      }
+      throw error;
     }
   },
 } 

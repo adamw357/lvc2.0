@@ -8,7 +8,7 @@ import "../styles/datepicker.css"
 import { GuestSelector } from './GuestSelector'
 // Remove unused imports if hotelService is no longer called directly here
 // import { hotelService } from '../services/hotelService' 
-import { format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import { MapPinIcon, CalendarDaysIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 // Remove imports for components no longer rendered here
 // import { HotelSearchResults } from './HotelSearchResults'
@@ -55,12 +55,16 @@ interface BookingWidgetProps {
 }
 
 export const BookingWidget: React.FC<BookingWidgetProps> = ({ onSearch }) => {
+  // Calculate default dates - using 95 days to ensure it's more than 3 months
+  const defaultCheckIn = addDays(new Date(), 95);
+  const defaultCheckOut = addDays(defaultCheckIn, 1);
+
   const [locationId, setLocationId] = useState('')
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
   const [locationType, setLocationType] = useState<string | null>(null);
-  const [checkIn, setCheckIn] = useState<Date | null>(null)
-  const [checkOut, setCheckOut] = useState<Date | null>(null)
+  const [checkIn, setCheckIn] = useState<Date | null>(defaultCheckIn)
+  const [checkOut, setCheckOut] = useState<Date | null>(defaultCheckOut)
   const [occupancies, setOccupancies] = useState<Occupancy[]>([
     { adults: 2, children: 0, childAges: [] } // Initial state: 1 room, 2 adults
   ])
@@ -166,7 +170,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ onSearch }) => {
             />
         </div>
 
-        {/* Check-in/Check-out Date Picker Wrapper - Remove fixed width, add flex-1 */}
+        {/* Check-in/Check-out Date Picker Wrapper */}
         <div className="relative w-full md:w-auto flex-1">
             <CalendarDaysIcon className={iconWrapperClasses} />
             <DatePicker
@@ -175,7 +179,8 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ onSearch }) => {
                 selectsRange
                 startDate={checkIn}
                 endDate={checkOut}
-                minDate={new Date()}
+                minDate={addDays(new Date(), 95)} // Updated to 95 days
+                maxDate={addDays(new Date(), 180)} // Optional: Set maximum date to 180 days from now
                 monthsShown={2}
                 onFocus={() => setIsDatePickerOpen(true)}
                 onBlur={() => setTimeout(() => setIsDatePickerOpen(false), 150)}

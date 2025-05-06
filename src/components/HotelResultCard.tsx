@@ -29,12 +29,12 @@ const renderAmenityIcons = (facilities: Hotel['facilities']) => {
 
   // Style adjustments: Increased size, slightly different colors
   const keyAmenities: { [key: string]: React.ReactNode } = {
-    pool: <Waves key="pool" size={24} className="text-blue-600" title="Pool" />, // Larger size, adjusted color
-    spa: <Sparkles key="spa" size={24} className="text-pink-600" title="Spa" />, // Larger size, adjusted color
-    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" title="Fitness Center" />, // Larger size, adjusted color
-    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" title="Free WiFi" />, // Larger size, adjusted color
-    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" title="Restaurant" />, // Larger size, adjusted color
-    bar: <Martini key="bar" size={24} className="text-purple-700" title="Bar/Lounge" />, // Larger size, adjusted color
+    pool: <Waves key="pool" size={24} className="text-blue-600" />, // Removed title
+    spa: <Sparkles key="spa" size={24} className="text-pink-600" />, // Removed title
+    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" />, // Removed title
+    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" />, // Removed title
+    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" />, // Removed title
+    bar: <Martini key="bar" size={24} className="text-purple-700" />, // Removed title
     // Add more mappings as needed
   };
 
@@ -150,8 +150,11 @@ export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewD
             {/* Updated Price Display */}
             {pricePerNight !== undefined ? (
               <>
-                <span className="text-xs text-blue-700 font-semibold block mb-0.5">LVC Member Rate</span>
-                <span className="text-lg font-bold text-gray-900">${pricePerNight.toFixed(2)}</span>
+                <span className="text-xs text-blue-700 font-semibold block mb-0.5">Member Price</span>
+                {/* Format price with toLocaleString for currency and commas */}
+                <span className="text-lg font-bold text-gray-900">
+                  {pricePerNight.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                </span>
                 <span className="text-sm text-gray-500"> / night</span>
               </>
             ) : (
@@ -163,7 +166,7 @@ export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewD
             onClick={() => onViewDetails(hotel.id)}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition duration-150 ease-in-out"
           >
-            View Member Rates
+            See Details
           </button>
         </div>
       </div>

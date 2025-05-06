@@ -1,11 +1,13 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation'; // Assuming shared navigation
+import { hotelService } from '@/services/hotelService';
 
 // Helper component to read search params (needed because useSearchParams requires Suspense)
 function BookingFormContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Extract booking details from URL parameters
@@ -41,15 +43,51 @@ function BookingFormContent() {
   // const [hotelDetails, setHotelDetails] = useState(null);
   // useEffect(() => { ... fetch ... }, [hotelId]);
 
-  const handleSubmitBooking = (event: React.FormEvent) => {
+  const handleSubmitBooking = async (event: React.FormEvent) => {
     event.preventDefault();
-    // TODO: Implement actual booking logic
-    // 1. Gather guest details from form
-    // 2. Construct payload for booking API call (likely needs rateId, recommendationId, guest details etc.)
-    // 3. Call a booking service function (e.g., hotelService.createBooking)
-    // 4. Handle success (navigate to confirmation page) or error (show message)
-    console.log('Booking submitted (placeholder)');
-    alert('Booking functionality not yet implemented.');
+    
+    try {
+      // Get form data
+      const formData = new FormData(event.target as HTMLFormElement);
+      const guestDetails = {
+        firstName: formData.get('firstName') as string,
+        lastName: formData.get('lastName') as string,
+        email: formData.get('email') as string,
+        phone: formData.get('phone') as string,
+      };
+
+      // Validate required fields
+      if (!hotelId || !checkIn || !checkOut || !occupancies || !currency || !rateId || !recommendationId) {
+        throw new Error('Missing required booking information');
+      }
+
+      // Create booking
+      const bookingResult = await hotelService.createBooking({
+        hotelId,
+        token: recommendationId, // Using recommendationId as the token
+        guestDetails,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        occupancies,
+        currency,
+        rateId,
+        recommendationId
+      });
+
+      // Handle successful booking
+      console.log('Booking successful:', bookingResult);
+      
+      // TODO: Navigate to confirmation page with booking ID
+      // For now, just show success message
+      alert('Booking successful! Booking ID: ' + bookingResult.data?.bookingId);
+      
+      // You might want to redirect to a confirmation page
+      // router.push(`/confirmation?bookingId=${bookingResult.data?.bookingId}`);
+
+    } catch (error) {
+      console.error('Booking failed:', error);
+      alert(error instanceof Error ? error.message : 'Failed to complete booking. Please try again.');
+    }
   };
 
   return (

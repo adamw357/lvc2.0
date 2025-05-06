@@ -68,12 +68,12 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ onSearch }) => {
   const [isGuestSelectorOpen, setIsGuestSelectorOpen] = useState(false)
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
-  const handleLocationSelect = (locationId: string, locationName: string, lat: number, long: number, type: string) => {
-    console.log('handleLocationSelect received:', { locationId, locationName, lat, long, type });
-    setLocationId(locationId)
-    setLat(lat)
-    setLng(long);
-    setLocationType(type);
+  const handleLocationSelect = (locationId: string, locationName: string, lat: number, lng: number) => {
+    console.log('handleLocationSelect received:', { locationId, locationName, lat, lng });
+    setLocationId(locationId);
+    setLat(lat);
+    setLng(lng);
+    setLocationType(''); // Set a default value or remove if not needed
     setError(''); // Clear error on new selection
   }
 

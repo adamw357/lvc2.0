@@ -1,9 +1,14 @@
 import Navigation from '@/components/Navigation'
-import BookingWidget from '@/components/BookingWidget'
+import { BookingWidget } from '@/components/BookingWidget'
 import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Home() {
+  const handleSearch = (searchParams: any) => {
+    console.log('Search params:', searchParams);
+    // Add search functionality here
+  };
+
   return (
     <>
       <Navigation />
@@ -18,7 +23,7 @@ export default function Home() {
               <p className="text-xl mb-12">
                 Access exclusive wholesale travel rates and unlock incredible savings compared to traditional booking sites.
               </p>
-              <BookingWidget />
+              <BookingWidget onSearch={handleSearch} />
             </div>
           </div>
         </section>

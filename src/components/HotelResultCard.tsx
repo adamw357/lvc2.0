@@ -29,12 +29,12 @@ const renderAmenityIcons = (facilities: Hotel['facilities']) => {
 
   // Style adjustments: Increased size, slightly different colors
   const keyAmenities: { [key: string]: React.ReactNode } = {
-    pool: <Waves key="pool" size={24} className="text-blue-600" title="Pool" />, // Larger size, adjusted color
-    spa: <Sparkles key="spa" size={24} className="text-pink-600" title="Spa" />, // Larger size, adjusted color
-    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" title="Fitness Center" />, // Larger size, adjusted color
-    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" title="Free WiFi" />, // Larger size, adjusted color
-    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" title="Restaurant" />, // Larger size, adjusted color
-    bar: <Martini key="bar" size={24} className="text-purple-700" title="Bar/Lounge" />, // Larger size, adjusted color
+    pool: <Waves key="pool" size={24} className="text-blue-600" aria-label="Pool" />, // Larger size, adjusted color
+    spa: <Sparkles key="spa" size={24} className="text-pink-600" aria-label="Spa" />, // Larger size, adjusted color
+    fitness: <Dumbbell key="fitness" size={24} className="text-gray-800" aria-label="Fitness Center" />, // Larger size, adjusted color
+    wifi: <Wifi key="wifi" size={24} className="text-cyan-600" aria-label="Free WiFi" />, // Larger size, adjusted color
+    restaurant: <Utensils key="restaurant" size={24} className="text-orange-600" aria-label="Restaurant" />, // Larger size, adjusted color
+    bar: <Martini key="bar" size={24} className="text-purple-700" aria-label="Bar/Lounge" />, // Larger size, adjusted color
     // Add more mappings as needed
   };
 
@@ -145,9 +145,6 @@ export const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel, onViewD
         {/* Price and Action */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-4 pt-4 border-t border-gray-200">
           <div className="mb-2 md:mb-0">
-            {/* DEBUG: Log the rate object */}
-            {console.log('HotelResultCard rate:', hotel.rate)}
-            {/* Updated Price Display */}
             {pricePerNight !== undefined ? (
               <>
                 <span className="text-xs text-blue-700 font-semibold block mb-0.5">LVC Member Rate</span>
